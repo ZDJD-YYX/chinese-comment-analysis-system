@@ -1,0 +1,516 @@
+/* ============================================================================
+   Motion.Lab 动效层（公共）
+   ----------------------------------------------------------------------------
+   本文件只增量添加上以 anim- 为前缀的动效类，不改动原有布局与业务类名。
+   所有可调参数集中在 :root 的 --anim-* 变量中，便于统一调整。
+   底部的 prefers-reduced-motion 规则可在系统开启"减少动态效果"时整体降级。
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   0. 动效参数
+   -------------------------------------------------------------------------- */
+:root {
+  /* 时长 */
+  --anim-dur-fast: .25s;
+  --anim-dur: .5s;
+  --anim-dur-slow: .9s;
+  --anim-dur-reveal: .6s;
+
+  /* 节奏 */
+  --anim-stagger: .1s;
+  --anim-ease: cubic-bezier(.2, .8, .2, 1);
+  --anim-ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  /* 位移与缩放 */
+  --anim-reveal-distance: 40px;
+  --anim-lift: 8px;
+  --anim-scale: 1.03;
+  --anim-tilt-max: 12deg;
+
+  /* 颜色 */
+  --anim-brand: var(--brand, #B4532F);
+  --anim-brand-2: var(--brand-2, #D9764A);
+  --anim-danger: var(--neg, #FF6B6B);
+}
+
+/* ---------------------------------------------------------------------------
+   1. 滚动体系
+   -------------------------------------------------------------------------- */
+
+/* 顶部滚动进度条 */
+.anim-scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  z-index: 60;
+  pointer-events: none;
+  background: rgba(120, 80, 50, .08);
+  opacity: 0;
+  transition: opacity var(--anim-dur-fast) ease;
+}
+.anim-scroll-progress.is-active { opacity: 1; }
+.anim-scroll-progress > i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--anim-brand), var(--anim-brand-2));
+  box-shadow: 0 0 14px rgba(180, 83, 47, .55);
+  transition: width .1s linear;
+}
+
+/* 区块滚动揭示 */
+.anim-reveal {
+  opacity: 0;
+  transform: translateY(var(--anim-reveal-distance));
+  transition:
+    opacity var(--anim-dur-reveal) ease,
+    transform var(--anim-dur-reveal) var(--anim-ease);
+  will-change: opacity, transform;
+}
+.anim-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* 列表错落入场：基态保持 opacity:1，动画结束后自然回到可见状态，
+   不会把 hover 的 transform 一起锁死 */
+.anim-stagger > * {
+  animation: animFadeUp var(--anim-dur) var(--anim-ease) backwards;
+  animation-delay: calc(var(--anim-index, 0) * var(--anim-stagger));
+}
+/* 首次渲染完成后关闭重复入场，避免轮询刷新时反复闪动 */
+.anim-stagger.is-done > * {
+  animation: none;
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   2. 按钮与点击反馈
+   -------------------------------------------------------------------------- */
+.anim-lift {
+  transition:
+    transform var(--anim-dur-fast) var(--anim-ease),
+    box-shadow var(--anim-dur-fast) var(--anim-ease);
+}
+.anim-lift:hover {
+  transform: translateY(calc(var(--anim-lift) * -1));
+  box-shadow:
+    0 18px 34px -18px rgba(74, 45, 28, .35),
+    0 0 40px -18px rgba(180, 83, 47, .35);
+}
+.anim-lift:active { transform: translateY(-2px); }
+
+/* 点击波纹 */
+.page-btn,
+.seg__btn {
+  position: relative;
+  overflow: hidden;
+}
+.anim-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .22;
+  pointer-events: none;
+  transform: scale(0);
+  animation: animRipple .6s ease-out forwards;
+}
+
+/* 次要按钮：平滑变色 + 轻微缩放 */
+.anim-hover-color {
+  transition:
+    background-color var(--anim-dur-fast) ease,
+    border-color var(--anim-dur-fast) ease,
+    color var(--anim-dur-fast) ease,
+    transform var(--anim-dur-fast) var(--anim-ease);
+}
+.anim-hover-scale:hover { transform: scale(var(--anim-scale)); }
+
+/* 图标按钮：悬停旋转一周 */
+.anim-icon-spin {
+  display: inline-block;
+  transition: transform .6s var(--anim-ease);
+}
+.anim-icon-spin:hover,
+.dropzone:hover .anim-icon-spin { transform: rotate(360deg); }
+
+/* 危险操作与校验失败：摇晃 */
+.anim-shake { animation: animShake .5s ease; }
+
+/* 表单错误态 */
+.anim-error {
+  border-color: rgba(255, 107, 107, .72) !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, .12) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   3. 全局反馈
+   -------------------------------------------------------------------------- */
+
+/* 加载旋转 */
+.anim-spinner,
+.anim-spinner-sm {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  border-color: rgba(120, 80, 50, .18);
+  border-top-color: var(--anim-brand);
+  animation: animSpin .8s linear infinite;
+}
+.anim-spinner { width: 32px; height: 32px; border-width: 3px; }
+.anim-spinner-sm {
+  width: 13px;
+  height: 13px;
+  border-width: 2px;
+  margin-right: 7px;
+  vertical-align: -2px;
+}
+
+/* 运行中的状态图标：用伪元素画一个持续旋转的环，不改动原 DOM */
+.anim-running #runLabel::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 7px;
+  vertical-align: -2px;
+  border: 2px solid rgba(120, 80, 50, .18);
+  border-top-color: var(--anim-brand);
+  border-radius: 50%;
+  animation: animRotate360 .8s linear infinite;
+}
+
+/* 轻提示：下滑进入，停留后淡出（与原 3.6s 移除逻辑对齐） */
+.anim-toast {
+  animation:
+    animSlideDown .32s var(--anim-ease) backwards,
+    animFadeOut .3s ease 2.9s forwards;
+}
+
+/* 分析完成通知：右下角滑入 + 弹性入场 */
+.anim-analysis-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px 18px;
+  border: 1px solid rgba(180, 83, 47, .28);
+  border-radius: 13px;
+  background: linear-gradient(150deg, #FFFDF9, #FDF3E7);
+  box-shadow:
+    0 24px 54px -26px rgba(74, 45, 28, .45),
+    0 0 52px -26px rgba(180, 83, 47, .45);
+  color: var(--text, #2E241C);
+  font-size: 13px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: animSlideRight .55s var(--anim-ease-spring) backwards;
+}
+.anim-analysis-toast__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(217, 118, 74, .24), rgba(240, 166, 90, .18));
+  color: var(--anim-brand);
+  animation: animElasticIn .8s var(--anim-ease-spring) backwards;
+}
+.anim-analysis-toast__text b { color: #7A3E26; font-weight: 600; }
+.anim-analysis-toast__text span { display: block; margin-top: 2px; color: var(--muted, #8B7563); font-size: 11.5px; }
+.anim-analysis-toast.is-leaving {
+  animation: animFadeOut .3s ease forwards;
+}
+
+/* ---------------------------------------------------------------------------
+   4. 登录页专属
+   -------------------------------------------------------------------------- */
+
+/* 登录卡片缩放弹跳入场 */
+.anim-zoom-bounce {
+  animation: animZoomBounce var(--anim-dur-slow) var(--anim-ease-spring) backwards;
+}
+/* 校验失败时的抖动需要盖过入场动画 */
+.auth-card.anim-shake { animation: animShake .5s ease; }
+
+/* 上传中的 32px 加载态（覆盖在拖拽区上方，不改变原布局） */
+.anim-upload-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: rgba(251, 246, 239, .78);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* 输入框聚焦：边框逐步画出 */
+.auth-card .field { position: relative; }
+.auth-card .field::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40px;
+  padding: 1px;
+  border-radius: var(--radius-xs, 7px);
+  background: linear-gradient(90deg, var(--anim-brand), var(--anim-brand-2), var(--anim-brand));
+  background-size: 300% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--anim-dur-fast) ease;
+}
+.auth-card .field:focus-within::after {
+  opacity: 1;
+  animation: animBorderDraw 1.4s ease-in-out infinite alternate;
+}
+
+/* 磁吸按钮 */
+.anim-magnetic { transition: transform .3s var(--anim-ease-spring); }
+
+/* 登录失败：红色闪烁 + 抖动 */
+.anim-flash { animation: animFlash .8s ease-in-out 2; }
+
+/* ---------------------------------------------------------------------------
+   5. 任务 / 上传
+   -------------------------------------------------------------------------- */
+
+/* 拖拽进入：边框从中心扩展 */
+.dropzone::before {
+  content: "";
+  position: absolute;
+  inset: 50% 50%;
+  z-index: 0;
+  border: 2px solid var(--anim-brand);
+  border-radius: var(--radius-sm, 10px);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    inset .4s var(--anim-ease),
+    opacity var(--anim-dur-fast) ease;
+}
+.dropzone.is-dragging::before {
+  inset: 0;
+  opacity: 1;
+}
+
+/* 任务卡片 3D 倾斜 + 跟随光斑 */
+.anim-tilt {
+  transform-style: preserve-3d;
+  transition: transform .15s ease;
+  will-change: transform;
+}
+.task::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    220px circle at var(--anim-mx, 50%) var(--anim-my, 50%),
+    rgba(217, 118, 74, .16),
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--anim-dur-fast) ease;
+}
+.task:hover::after { opacity: 1; }
+
+/* 任务完成庆祝（提高优先级，避免被 .anim-stagger.is-done 的 animation:none 覆盖） */
+.anim-tada { animation: animTada 1s ease-in-out; }
+.task.anim-tada { animation: animTada 1s ease-in-out; }
+
+/* 删除前淡出缩小 */
+.anim-removing {
+  animation: animRemove .4s ease forwards;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   6. 结果可视化
+   -------------------------------------------------------------------------- */
+.anim-chart { opacity: 0; }
+.anim-chart.anim-chart-ready {
+  animation: animFadeIn .5s ease forwards;
+}
+
+/* 表格行轻微上浮 */
+.table tbody tr {
+  transition: background-color .16s ease, transform .18s var(--anim-ease);
+}
+.table tbody tr:hover { transform: translateY(-1px); }
+
+/* 导出成功：粒子爆开 */
+.anim-burst-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+  transition:
+    transform .6s cubic-bezier(.2, .8, .2, 1),
+    opacity .6s ease;
+}
+
+/* 分页切换时内容淡入 */
+.anim-fade-in { animation: animFadeIn .4s ease both; }
+
+/* 空状态呼吸 */
+.anim-scale-pulse {
+  animation: animScalePulse 1.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* 手风琴（保留工具类，供后续筛选面板使用） */
+.anim-accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height var(--anim-dur-fast) ease;
+}
+.anim-accordion-body.is-open { max-height: 420px; }
+
+/* 打字机 */
+.anim-typewriter {
+  border-right: 2px solid currentColor;
+  padding-right: 4px;
+  animation: animCaret .8s step-end infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   7. 关键帧
+   -------------------------------------------------------------------------- */
+@keyframes animFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes animFadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes animFadeOut {
+  to { opacity: 0; transform: translateY(-6px) scale(.98); }
+}
+
+@keyframes animRipple {
+  to { transform: scale(2.6); opacity: 0; }
+}
+
+@keyframes animShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-8px); }
+  40%      { transform: translateX(8px); }
+  60%      { transform: translateX(-6px); }
+  80%      { transform: translateX(6px); }
+}
+
+@keyframes animSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes animRotate360 {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes animSlideDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes animSlideRight {
+  from { opacity: 0; transform: translateX(120%) scale(.94); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes animElasticIn {
+  0%   { opacity: 0; transform: scale(0) rotate(-120deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes animZoomBounce {
+  from { opacity: 0; transform: scale(.86); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes animBorderDraw {
+  to { background-position: 100% 0; }
+}
+
+@keyframes animFlash {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .25; }
+}
+
+@keyframes animTada {
+  0%, 100% { transform: scale(1) rotate(0); }
+  10%, 20% { transform: scale(.94) rotate(-2deg); }
+  30%, 50%, 70%, 90% { transform: scale(1.06) rotate(2deg); }
+  40%, 60%, 80% { transform: scale(1.06) rotate(-2deg); }
+}
+
+@keyframes animRemove {
+  to { opacity: 0; transform: scale(.92) translateX(-8px); }
+}
+
+@keyframes animScalePulse {
+  0%, 100% { transform: scale(.88); }
+  50%      { transform: scale(1.08); }
+}
+
+@keyframes animCaret {
+  50% { border-color: transparent; }
+}
+
+/* ---------------------------------------------------------------------------
+   8. 无障碍降级：系统要求减少动态效果时全部关闭
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .anim-scroll-progress,
+  .anim-reveal,
+  .anim-stagger > *,
+  .anim-lift,
+  .anim-hover-color,
+  .anim-icon-spin,
+  .anim-zoom-bounce,
+  .anim-magnetic,
+  .anim-tilt,
+  .anim-chart,
+  .anim-fade-in,
+  .anim-scale-pulse,
+  .anim-typewriter,
+  .anim-analysis-toast,
+  .anim-analysis-toast__icon,
+  .anim-toast,
+  .anim-tada,
+  .anim-removing,
+  .anim-flash,
+  .anim-shake {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .anim-reveal { opacity: 1 !important; }
+  .anim-chart { opacity: 1 !important; }
+  .dropzone::before,
+  .task::after { display: none; }
+  .anim-spinner,
+  .anim-spinner-sm { animation: none !important; border-top-color: var(--anim-brand); opacity: .8; }
+  .anim-running #runLabel::before { animation: none !important; }
+  .anim-burst-particle { display: none; }
+}

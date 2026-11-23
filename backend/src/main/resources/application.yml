@@ -1,0 +1,148 @@
+# ===================================================================
+# 中文评论智能分析系统 - 应用配置
+# 对应设计文档《概要设计说明书》7.3 关键配置项
+# ===================================================================
+server:
+  # HTTP 服务端口
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+    # 会话有效期：2 小时（登录态由后端会话校验，不再依赖前端存储）
+    session:
+      timeout: 2h
+      cookie:
+        http-only: true
+        same-site: lax
+
+spring:
+  application:
+    name: comment-analysis-system
+
+  # ------------------------- 静态资源缓存 -------------------------
+  # 单页应用刷新后必须拿到最新的 index.html 与脚本，避免浏览器继续使用旧版逻辑
+  web:
+    resources:
+      cache:
+        period: 0
+        cachecontrol:
+          no-cache: true
+          no-store: true
+
+  # ------------------------- 数据源配置 -------------------------
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # rewriteBatchedStatements=true：开启批量插入优化（对应数据库设计优化点 ⑦）
+    # allowPublicKeyRetrieval=true + useSSL=false：本地开发环境免 SSL 连接
+    url: jdbc:mysql://localhost:3306/comment_analysis?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true
+    username: root
+    password: 888888
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+
+  # ------------------------- 文件上传大小限制 -------------------------
+  servlet:
+    multipart:
+      enabled: true
+      # 单文件上传大小上限：50 MB
+      max-file-size: 50MB
+      # 单次请求大小上限：50 MB
+      max-request-size: 50MB
+
+# ------------------------- MyBatis-Plus 配置 -------------------------
+mybatis-plus:
+  # Mapper XML 映射文件位置（当前使用 BaseMapper 注解式 CRUD，可留空目录）
+  mapper-locations: classpath*:/mapper/**/*.xml
+  # 实体类别名包
+  type-aliases-package: com.example.commentanalysis.entity
+  configuration:
+    # 开启下划线字段名到驼峰属性名的自动映射
+    map-underscore-to-camel-case: true
+    # SQL 走 SLF4J；mapper 包日志级别设为 info，避免调试日志把评论原文写入日志文件
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    banner: false
+    db-config:
+      # 主键策略：数据库自增（配合实体 @TableId(type = IdType.AUTO)）
+      id-type: auto
+      # 逻辑删除配置：与 analysis_task.is_deleted 对应
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# ------------------------- 业务自定义配置 -------------------------
+app:
+  # 模型文件路径配置
+  model:
+    # 模型目录（TorchScript model.pt + vocab.txt + labels.txt）
+    # 支持两种写法：文件系统相对/绝对路径，或 classpath:model/ 形式
+    #
+    # 注意：必须使用「纯 ASCII」路径。libtorch（PyTorch C++ 后端）在 Windows 上
+    # 无法打开含中文字符的路径，torch.jit.load 与 DJL 均会报
+    # "open file failed because of errno 2"。本机将模型放在 D:/models 下，
+    # 训练产物（model/bert-zh-sentiment-v3）需复制过去后使用。
+    path: D:/models/bert-zh-sentiment-v3
+    # 默认模型版本号，写入 analysis_task.model_version
+    version: bert-zh-sentiment-v3
+    # 推理设备：cpu（本项目仅打包 CPU 本地库，固定使用 CPU）
+    device: cpu
+    # 单条文本最大 token 数，需与训练/导出时的 MAX_LENGTH 一致
+    max-length: 128
+    # 模型加载失败是否阻断应用启动：
+    # false —— 记录错误日志并降级（isAvailable=false，创建任务返回 3001），应用仍可启动
+    # true  —— 严格遵循设计文档 FR-AI-01，直接启动失败
+    fail-fast: false
+  inference:
+    # 推理批量大小（可 1～256 配置）
+    batch-size: 32
+    # 低置信度需人工复核阈值
+    review-threshold: 0.60
+    # 热点词返回条数上限
+    keyword-top-n: 50
+    # 单条评论最大字符数
+    max-text-length: 512
+    # 写入 analysis_result.keywords 的单条评论关键词数量上限
+    keywords-per-comment: 5
+  task:
+    # 推理任务线程池
+    pool:
+      core-size: 2
+      max-size: 4
+      queue-capacity: 100
+  # 智能输入：粘贴文本 / 网页链接的自动识别与抓取
+  input:
+    # 网页抓取超时（毫秒），包含连接与读取；默认 2 秒内返回，避免用户长时间等待
+    fetch-timeout-ms: 2000
+    # 允许的最大重定向次数，逐跳校验目标地址，避免跳转到内网
+    max-redirects: 3
+    # 单页最大下载字节数，超出部分不下载
+    max-body-size: 3145728
+    # 单次输入的文本字符上限（超出直接提示分段提交，不做静默截断）
+    max-input-chars: 500000
+
+# ------------------------- 健康检查 -------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# ------------------------- 日志配置 -------------------------
+logging:
+  file:
+    name: logs/app.log
+  logback:
+    rollingpolicy:
+      # 关键操作与异常日志保留不少于 30 天（对应需求 NFR 安全条目）
+      max-history: 30
+  level:
+    root: info
+    com.example.commentanalysis: debug
+    # 关闭 SQL 明细日志，避免评论原文进入日志文件
+    com.example.commentanalysis.mapper: info

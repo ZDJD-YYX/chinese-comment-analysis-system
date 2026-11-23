@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 模型权重（体积过大，需单独下载或训练生成）
+model/
+*.pt
+*.pth
+*.safetensors
+*.joblib
+
+# 构建产物
+backend/target/
+target/
+*.jar
+
+# 日志
+*.log
+
+# 运行时输出与中间产物
+output/
+output_v3/
+.screenshots/
+.trae-html-share-packages/
+_dd_pages/
+backend/logs/
+backend/data/backup/
+_dump*.txt
+_doc_*.txt
+
+# 大体积数据集（超过 5MB，可在本地保留）
+data/真实评论_网络下载/06_美团餐饮评论_ASAP_train.csv
+data/真实评论_网络下载/03_电商购物评论_online_shopping_10_cats.csv
+data/real_public/online_shopping_10_cats/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini

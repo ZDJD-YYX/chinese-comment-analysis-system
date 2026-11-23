@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#FBF6EF">
+  <title>中文评论智能分析系统</title>
+  <link rel="stylesheet" href="css/style.css?v=20261110e">
+  <link rel="stylesheet" href="css/motion.css">
+</head>
+<body>
+
+<!-- Motion.Lab：顶部滚动进度条 -->
+<div class="anim-scroll-progress" aria-hidden="true"><i></i></div>
+
+<!-- 氛围层：缓慢漂移的极光光晕 + 网格 + 颗粒，不参与交互 -->
+<div class="ambient" aria-hidden="true">
+  <span class="ambient__orb ambient__orb--a"></span>
+  <span class="ambient__orb ambient__orb--b"></span>
+  <span class="ambient__orb ambient__orb--c"></span>
+  <span class="ambient__grid"></span>
+  <span class="ambient__grain"></span>
+</div>
+
+<!-- ============================================================
+     视图一：登录
+     ============================================================ -->
+<div class="view view--auth" id="loginView">
+  <div class="auth">
+    <!-- 左侧说明区：讲清系统做什么 -->
+    <section class="auth__intro">
+      <div class="brand brand--lg">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span class="brand__name">中文评论智能分析系统</span>
+      </div>
+
+      <h1 class="auth__title">把一列中文评论<br>读成一张情绪地图</h1>
+      <p class="auth__desc">
+        上传评论文件后，系统自动识别评论列、逐条判定情感倾向，并汇总为情感分布、热点词与可复核的明细结果。
+      </p>
+
+      <dl class="auth__facts">
+        <div class="auth__fact">
+          <dt>支持格式</dt>
+          <dd>.xlsx / .xls / .csv / .txt / .tsv / .json，或直接粘贴文本 / 网页链接</dd>
+        </div>
+        <div class="auth__fact">
+          <dt>情感判定</dt>
+          <dd>正面、负面、中性三类，同时给出置信度</dd>
+        </div>
+        <div class="auth__fact">
+          <dt>输出结果</dt>
+          <dd>情感分布图 / 热点词云 / 评论明细 / Excel 导出</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- 右侧表单区 -->
+    <section class="auth__panel">
+      <form class="auth-card" id="authForm" novalidate>
+        <h2 class="auth-card__title" id="authTitle">登录工作台</h2>
+        <p class="auth-card__sub" id="authSub">使用管理员账号继续</p>
+
+        <label class="field">
+          <span class="field__label">账号</span>
+          <input class="field__input" type="text" id="authUsername" name="username"
+                 autocomplete="username" placeholder="请输入账号" maxlength="50" required>
+        </label>
+
+        <label class="field">
+          <span class="field__label">密码</span>
+          <input class="field__input" type="password" id="authPassword" name="password"
+                 autocomplete="current-password" placeholder="请输入密码" maxlength="64" required>
+        </label>
+
+        <p class="auth-card__error" id="authError" hidden></p>
+
+        <button class="btn btn--primary btn--block" type="submit" id="authSubmit">进入工作台</button>
+        <button class="btn btn--ghost btn--block" type="button" id="authSwitch">还没有账号，注册管理员账号</button>
+      </form>
+    </section>
+  </div>
+</div>
+
+<!-- ============================================================
+     视图二：分析工作台
+     ============================================================ -->
+<div class="view view--app" id="appView" hidden>
+  <div class="app">
+
+    <!-- ------------------ 左栏：创建任务 + 任务列表 ------------------ -->
+    <aside class="rail">
+      <div class="rail__head">
+        <div class="brand">
+          <span class="brand__mark" aria-hidden="true"></span>
+          <span class="brand__name">评论智能分析</span>
+        </div>
+        <button class="rail__logout" type="button" id="logoutBtn">退出</button>
+      </div>
+
+      <!-- 视图切换：分析工作台 / 数据看板 / 系统设置 -->
+      <nav class="rail__nav" id="railNav" aria-label="视图切换">
+        <button class="rail__nav-btn is-active" type="button" data-view="workspace">分析工作台</button>
+        <button class="rail__nav-btn" type="button" data-view="dashboard">数据看板</button>
+        <button class="rail__nav-btn" type="button" data-view="compare">任务对比</button>
+        <button class="rail__nav-btn" type="button" data-view="settings">系统设置</button>
+      </nav>
+
+      <!-- 上传区：点击或拖拽 -->
+      <div class="rail__upload">
+        <div class="dropzone" id="dropzone" role="button" tabindex="0"
+             aria-label="上传评论文件，支持 Excel、CSV、TXT、TSV 与 JSON">
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.txt,.tsv,.json" hidden>
+          <svg class="dropzone__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" fill="none" stroke="currentColor"
+                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 15v3.2A1.8 1.8 0 0 0 5.8 20h12.4a1.8 1.8 0 0 0 1.8-1.8V15"
+                  fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <p class="dropzone__title">拖入文件，或点击选择</p>
+          <p class="dropzone__hint">.xlsx / .xls / .csv / .txt / .tsv / .json，单文件不超过 50 MB</p>
+          <p class="dropzone__hint">导入时自动校验编码与乱码，并备份原始文件</p>
+        </div>
+
+        <!-- 上传进度（上传阶段真实进度，解析后切换为分析进度） -->
+        <div class="upload-meter" id="uploadMeter" hidden>
+          <div class="upload-meter__row">
+            <span id="uploadStage">正在上传文件</span>
+            <span id="uploadPercent">0%</span>
+          </div>
+          <div class="meter"><i id="uploadBar" style="width:0%"></i></div>
+        </div>
+      </div>
+
+      <!-- 智能输入：粘贴文本或网页链接，自动识别类型，无需切换模式 -->
+      <div class="rail__smart">
+        <div class="rail__block-head">
+          <span>智能输入</span>
+          <span class="rail__count" id="smartType">自动识别</span>
+        </div>
+        <textarea class="smart-input" id="smartInput" rows="3"
+                  placeholder="粘贴评论文本或网页链接，自动识别并开始分析"
+                  aria-label="粘贴评论文本或网页链接"></textarea>
+        <div class="smart-input__bar">
+          <span class="smart-input__hint" id="smartHint">支持纯文本 / 网页链接，Ctrl + Enter 提交</span>
+          <button class="btn btn--primary btn--sm" type="button" id="smartSubmit">开始分析</button>
+        </div>
+        <!-- 接收回执：明确告知已接收并进入分析流程 -->
+        <div class="receipt" id="inputReceipt" hidden aria-live="polite">
+          <div class="receipt__head">
+            <span class="receipt__badge" id="receiptBadge">已接收</span>
+            <span class="receipt__time" id="receiptMeta"></span>
+          </div>
+          <p class="receipt__title" id="receiptTitle"></p>
+          <p class="receipt__desc" id="receiptDesc"></p>
+        </div>
+      </div>
+
+      <!-- 任务列表 -->
+      <div class="rail__block">
+        <div class="rail__block-head">
+          <span>分析任务</span>
+          <span class="rail__count" id="taskCount">0</span>
+        </div>
+        <input class="field__input field__input--sm" type="search" id="taskSearch"
+               placeholder="按任务名称搜索" autocomplete="off">
+        <!-- 按任务状态筛选（FR-BIZ-22 状态维度） -->
+        <select class="field__input field__input--sm rail__select" id="taskStatus"
+                aria-label="按任务状态筛选">
+          <option value="">全部状态</option>
+          <option value="PENDING">待执行</option>
+          <option value="RUNNING">分析中</option>
+          <option value="SUCCESS">已完成</option>
+          <option value="FAILED">失败</option>
+          <option value="CANCELED">已终止</option>
+        </select>
+        <!-- 按创建时间范围筛选历史任务（FR-BIZ-22） -->
+        <div class="rail__range">
+          <input class="field__input field__input--sm" type="date" id="taskDateStart"
+                 aria-label="任务创建起始日期">
+          <span class="rail__range-sep">至</span>
+          <input class="field__input field__input--sm" type="date" id="taskDateEnd"
+                 aria-label="任务创建截止日期">
+        </div>
+      </div>
+
+      <div class="task-list" id="taskList"></div>
+      <!-- 任务批量操作：勾选任务后出现 -->
+      <div class="task-batch" id="taskBatch" hidden>
+        <span class="task-batch__info">已选 <b id="taskBatchCount">0</b> 个</span>
+        <button class="btn btn--ghost btn--sm" type="button" id="taskBatchDeleteBtn">删除所选</button>
+        <button class="btn btn--ghost btn--sm" type="button" id="taskBatchClearBtn">取消</button>
+      </div>
+      <div class="task-pager" id="taskPager"></div>
+
+      <div class="rail__foot">
+        <button class="rail__profile" type="button" id="profileBtn"
+                title="个人中心与账号设置">
+          <span class="rail__avatar" id="railAvatar" aria-hidden="true">—</span>
+          <span class="rail__user" id="railUser">未登录</span>
+        </button>
+        <span class="rail__hint">数据保存在本地服务</span>
+      </div>
+    </aside>
+
+    <!-- ------------------ 右栏：任务详情 ------------------ -->
+    <main class="main">
+      <!-- 任务信息条 -->
+      <header class="taskbar" id="taskbar" hidden>
+        <div class="taskbar__info">
+          <h2 class="taskbar__name" id="taskName">—</h2>
+          <p class="taskbar__meta" id="taskMeta"></p>
+          <p class="taskbar__error" id="taskError" hidden></p>
+        </div>
+        <div class="taskbar__actions">
+          <span class="pill" id="taskStatusPill">—</span>
+          <button class="btn btn--ghost" type="button" id="reportBtn">导出报告</button>
+          <button class="btn btn--ghost" type="button" id="renameBtn">重命名</button>
+          <button class="btn btn--ghost" type="button" id="runBtn">重新分析</button>
+          <button class="btn btn--ghost" type="button" id="cancelBtn" hidden>终止分析</button>
+          <button class="btn btn--danger" type="button" id="deleteBtn">删除任务</button>
+        </div>
+      </header>
+
+      <!-- 无任务时的空状态 -->
+      <section class="empty" id="emptyState">
+        <p class="empty__title">还没有正在查看的任务</p>
+        <p class="empty__desc">从左侧上传一份评论文件，或粘贴文本 / 网页链接，也可以在任务列表中点击一条历史任务查看结果。</p>
+      </section>
+
+      <!-- 任务详情内容 -->
+      <div class="stage" id="taskContent" hidden>
+
+        <!-- 运行中的整体进度 -->
+        <div class="runbar" id="runBar" hidden>
+          <div class="runbar__row">
+            <span class="runbar__label" id="runLabel">正在分析</span>
+            <span class="runbar__value" id="runValue">0 / 0 条</span>
+          </div>
+          <div class="meter meter--lg"><i id="runBarFill" style="width:0%"></i></div>
+        </div>
+
+        <!-- 概览 + 情感分布饼图 -->
+        <section class="grid grid--top">
+          <article class="card card--summary">
+            <div class="card__head">
+              <h3 class="card__title">情感分布概览</h3>
+              <span class="card__aside" id="summaryTotal">共 0 条评论</span>
+            </div>
+
+            <div class="stats" id="stats">
+              <div class="stat stat--pos">
+                <span class="stat__label">正面</span>
+                <span class="stat__value" data-role="posCount">0</span>
+                <span class="stat__ratio" data-role="posRatio">0%</span>
+              </div>
+              <div class="stat stat--neg">
+                <span class="stat__label">负面</span>
+                <span class="stat__value" data-role="negCount">0</span>
+                <span class="stat__ratio" data-role="negRatio">0%</span>
+              </div>
+              <div class="stat stat--neu">
+                <span class="stat__label">中性</span>
+                <span class="stat__value" data-role="neuCount">0</span>
+                <span class="stat__ratio" data-role="neuRatio">0%</span>
+              </div>
+            </div>
+
+            <!-- 情感占比条：用长度直接表达比例 -->
+            <div class="emobar" aria-hidden="true">
+              <i class="emobar__seg emobar__seg--pos" data-role="posBar" style="width:0%"></i>
+              <i class="emobar__seg emobar__seg--neg" data-role="negBar" style="width:0%"></i>
+              <i class="emobar__seg emobar__seg--neu" data-role="neuBar" style="width:0%"></i>
+            </div>
+
+            <dl class="metrics" id="metrics">
+              <div class="metrics__item">
+                <dt>平均置信度</dt>
+                <dd data-role="avgConfidence">—</dd>
+              </div>
+              <div class="metrics__item">
+                <dt>待人工复核</dt>
+                <dd data-role="reviewCount">—</dd>
+              </div>
+              <div class="metrics__item">
+                <dt>推理异常样本</dt>
+                <dd data-role="errorCount">—</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article class="card card--pie">
+            <div class="card__head">
+              <h3 class="card__title">情感分布</h3>
+              <span class="card__aside">按评论条数占比</span>
+            </div>
+            <div class="chart chart--pie" id="pieChart"></div>
+          </article>
+        </section>
+
+        <!-- 词云 + 热点词排名 -->
+        <section class="grid grid--mid">
+          <article class="card">
+            <div class="card__head">
+              <h3 class="card__title">热点词云</h3>
+              <div class="seg" id="cloudSeg">
+                <button class="seg__btn is-active" type="button" data-sentiment="ALL">全部</button>
+                <button class="seg__btn" type="button" data-sentiment="POSITIVE">正面</button>
+                <button class="seg__btn" type="button" data-sentiment="NEGATIVE">负面</button>
+                <button class="seg__btn" type="button" data-sentiment="NEUTRAL">中性</button>
+              </div>
+            </div>
+            <div class="chart chart--cloud" id="cloudChart"></div>
+          </article>
+
+          <article class="card">
+            <div class="card__head">
+              <h3 class="card__title">热点词排名</h3>
+              <span class="card__aside">按 TF-IDF 权重</span>
+            </div>
+            <ol class="rank" id="rankList"></ol>
+          </article>
+        </section>
+
+        <!-- 置信度分布 + 负面关注点 -->
+        <section class="grid grid--mid">
+          <article class="card">
+            <div class="card__head">
+              <h3 class="card__title">置信度分布</h3>
+              <span class="card__aside" id="confidenceAside">按 0.1 区间统计</span>
+            </div>
+            <div class="chart chart--hist" id="confidenceChart"></div>
+          </article>
+
+          <article class="card">
+            <div class="card__head">
+              <h3 class="card__title">负面评论关注点</h3>
+              <span class="card__aside">Top 10 关键词</span>
+            </div>
+            <div class="chart chart--bar" id="negativeChart"></div>
+          </article>
+        </section>
+
+        <!-- 复核质量：一致率 / 改判方向 / 混淆矩阵 -->
+        <section class="card" id="qualityCard">
+          <div class="card__head">
+            <h3 class="card__title">复核质量</h3>
+            <span class="card__aside" id="qualityAside">基于已复核样本</span>
+          </div>
+          <div class="quality" id="qualityBody"></div>
+        </section>
+
+        <!-- 情感趋势（FR-BIZ-18）：源文件无时间列时整卡隐藏 -->
+        <section class="card" id="taskTrendCard" hidden>
+          <div class="card__head">
+            <h3 class="card__title">情感趋势</h3>
+            <span class="card__aside" id="taskTrendAside">按评论时间聚合</span>
+          </div>
+          <div class="chart chart--trend" id="taskTrendChart"></div>
+        </section>
+
+        <!-- 结果明细表 -->
+        <section class="card card--table">
+          <div class="card__head card__head--wrap">
+            <h3 class="card__title">评论分析结果</h3>
+            <div class="toolbar">
+              <select class="field__input field__input--select" id="sentimentFilter">
+                <option value="">全部情感</option>
+                <option value="POSITIVE">正面</option>
+                <option value="NEGATIVE">负面</option>
+                <option value="NEUTRAL">中性</option>
+              </select>
+              <!-- 复核状态筛选：快速定位待人工复核的低置信度结果 -->
+              <select class="field__input field__input--select" id="reviewFilter"
+                      aria-label="按复核状态筛选">
+                <option value="">全部复核状态</option>
+                <option value="1">只看待复核</option>
+                <option value="0">只看已复核</option>
+              </select>
+              <!-- 置信度区间筛选（FR-BIZ-20） -->
+              <span class="toolbar__range" title="按置信度区间筛选（留空表示不限）">
+                <input class="field__input field__input--sm toolbar__num" type="number"
+                       id="confidenceMin" min="0" max="1" step="0.05" placeholder="置信度下限"
+                       aria-label="置信度区间下限">
+                <span class="rail__range-sep">～</span>
+                <input class="field__input field__input--sm toolbar__num" type="number"
+                       id="confidenceMax" min="0" max="1" step="0.05" placeholder="置信度上限"
+                       aria-label="置信度区间上限">
+              </span>
+              <input class="field__input field__input--sm" type="search" id="resultSearch"
+                     placeholder="搜索评论内容或关键词" autocomplete="off">
+              <select class="field__input field__input--select" id="exportScope"
+                      aria-label="导出范围">
+                <option value="all">全量导出</option>
+                <option value="current">仅当前筛选</option>
+              </select>
+              <select class="field__input field__input--select" id="exportFormat"
+                      aria-label="导出文件格式">
+                <option value="xlsx">Excel</option>
+                <option value="csv">CSV</option>
+                <option value="json">JSON</option>
+              </select>
+              <button class="btn btn--primary" type="button" id="exportBtn">导出结果</button>
+            </div>
+          </div>
+
+          <!-- 批量复核：勾选结果后出现 -->
+          <div class="batch-bar" id="batchBar" hidden>
+            <span class="batch-bar__info">已选 <b id="batchCount">0</b> 条</span>
+            <select class="field__input field__input--select" id="batchSentiment"
+                    aria-label="批量复核结论">
+              <option value="POSITIVE">正面</option>
+              <option value="NEGATIVE">负面</option>
+              <option value="NEUTRAL">中性</option>
+            </select>
+            <button class="btn btn--primary btn--sm" type="button" id="batchReviewBtn">批量复核</button>
+            <button class="btn btn--ghost btn--sm" type="button" id="batchClearBtn">取消选择</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table" id="resultTable">
+              <thead>
+                <tr>
+                  <th class="col-check">
+                    <input type="checkbox" id="resultCheckAll" aria-label="全选本页结果">
+                  </th>
+                  <th class="col-id">评论号</th>
+                  <th>评论内容</th>
+                  <th class="col-sentiment">情感</th>
+                  <th class="col-confidence">
+                    <button class="th-sort" type="button" id="confidenceSortBtn"
+                            title="按置信度排序，点击切换升序 / 降序">
+                      置信度<span class="th-sort__arrow" id="confidenceSortArrow">↕</span>
+                    </button>
+                  </th>
+                  <th class="col-keywords">关键词</th>
+                  <th class="col-flag">复核</th>
+                  <th class="col-time">分析时间</th>
+                </tr>
+              </thead>
+              <tbody id="resultBody"></tbody>
+            </table>
+            <!-- 无数据时显示：不放在表格里，避免整宽单元格在横向滚动时被裁切 -->
+            <p class="table-empty" id="resultEmpty" hidden>没有符合条件的评论，换个关键词或情感筛选试试</p>
+          </div>
+
+          <div class="pager" id="pager"></div>
+        </section>
+      </div>
+
+      <!-- ------------------ 数据看板 ------------------ -->
+      <section class="board" id="dashboardView" hidden>
+        <header class="board__head">
+          <div>
+            <h2 class="board__title">数据看板</h2>
+            <p class="board__sub">跨任务汇总；点击最近任务可直接打开该任务的结果</p>
+          </div>
+          <button class="btn btn--ghost" type="button" id="boardRefreshBtn">刷新</button>
+        </header>
+
+        <div class="kpis">
+          <article class="kpi">
+            <span class="kpi__label">任务总数</span>
+            <span class="kpi__value" id="kpiTasks">—</span>
+            <span class="kpi__hint" id="kpiTasksHint">—</span>
+          </article>
+          <article class="kpi">
+            <span class="kpi__label">累计评论</span>
+            <span class="kpi__value" id="kpiComments">—</span>
+            <span class="kpi__hint">所有任务解析条数之和</span>
+          </article>
+          <article class="kpi">
+            <span class="kpi__label">待复核</span>
+            <span class="kpi__value" id="kpiReview">—</span>
+            <span class="kpi__hint">低置信度待人工确认</span>
+          </article>
+          <article class="kpi">
+            <span class="kpi__label">平均置信度</span>
+            <span class="kpi__value" id="kpiConfidence">—</span>
+            <span class="kpi__hint">按评论条数加权</span>
+          </article>
+        </div>
+
+        <section class="grid grid--top">
+          <article class="card">
+            <div class="card__head">
+              <h3 class="card__title">整体情感分布</h3>
+              <span class="card__aside" id="boardTotal">共 0 条评论</span>
+            </div>
+            <div class="stats">
+              <div class="stat stat--pos">
+                <span class="stat__label">正面</span>
+                <span class="stat__value" id="boardPosCount">0</span>
+                <span class="stat__ratio" id="boardPosRatio">0%</span>
+              </div>
+              <div class="stat stat--neg">
+                <span class="stat__label">负面</span>
+                <span class="stat__value" id="boardNegCount">0</span>
+                <span class="stat__ratio" id="boardNegRatio">0%</span>
+              </div>
+              <div class="stat stat--neu">
+                <span class="stat__label">中性</span>
+                <span class="stat__value" id="boardNeuCount">0</span>
+                <span class="stat__ratio" id="boardNeuRatio">0%</span>
+              </div>
+            </div>
+            <div class="emobar" aria-hidden="true">
+              <i class="emobar__seg emobar__seg--pos" id="boardPosBar" style="width:0%"></i>
+              <i class="emobar__seg emobar__seg--neg" id="boardNegBar" style="width:0%"></i>
+              <i class="emobar__seg emobar__seg--neu" id="boardNeuBar" style="width:0%"></i>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__head">
+              <h3 class="card__title">近 7 天任务量</h3>
+              <span class="card__aside">按创建日期</span>
+            </div>
+            <div class="chart chart--trend" id="trendChart"></div>
+          </article>
+        </section>
+
+        <section class="card">
+          <div class="card__head">
+            <h3 class="card__title">最近任务</h3>
+            <span class="card__aside">最近 5 条</span>
+          </div>
+          <div class="board-recent" id="boardRecent"></div>
+        </section>
+      </section>
+
+      <!-- ------------------ 任务对比 ------------------ -->
+      <section class="board" id="compareView" hidden>
+        <header class="board__head">
+          <div>
+            <h2 class="board__title">任务对比</h2>
+            <p class="board__sub">选择两个已完成任务，并排比较情感分布、关键指标与热点词</p>
+          </div>
+          <button class="btn btn--ghost" type="button" id="compareRefreshBtn">刷新任务</button>
+        </header>
+
+        <div class="compare-picker">
+          <label class="compare-picker__field">
+            <span>任务 A</span>
+            <select class="field__input field__input--select" id="compareLeft"></select>
+          </label>
+          <span class="compare-picker__vs">VS</span>
+          <label class="compare-picker__field">
+            <span>任务 B</span>
+            <select class="field__input field__input--select" id="compareRight"></select>
+          </label>
+          <button class="btn btn--primary" type="button" id="compareRunBtn">开始对比</button>
+        </div>
+
+        <div class="compare-result" id="compareResult">
+          <p class="board-recent__empty" id="compareEmpty">选择两个任务后点击「开始对比」</p>
+
+          <div id="compareBody" hidden>
+            <!-- 自动生成的对比结论 -->
+            <section class="compare-summary" id="compareSummary"></section>
+
+            <!-- 核心指标并排对比 -->
+            <section class="card card--table">
+              <div class="card__head">
+                <h3 class="card__title">核心指标对比</h3>
+                <span class="card__aside" id="compareTableAside">差异按 B − A 计算</span>
+              </div>
+              <div class="table-wrap">
+                <table class="compare-table" id="compareTable"></table>
+              </div>
+            </section>
+
+            <!-- 情感分布对比 -->
+            <section class="card">
+              <div class="card__head">
+                <h3 class="card__title">情感分布对比</h3>
+                <span class="card__aside">按占比</span>
+              </div>
+              <div class="chart chart--hist" id="compareSentimentChart"></div>
+            </section>
+
+            <!-- 置信度分布对比 -->
+            <section class="card">
+              <div class="card__head">
+                <h3 class="card__title">置信度分布对比</h3>
+                <span class="card__aside">按区间占比</span>
+              </div>
+              <div class="chart chart--hist" id="compareConfidenceChart"></div>
+            </section>
+
+            <!-- 关键词差异：A 独有 / 共有 / B 独有 -->
+            <section class="card">
+              <div class="card__head">
+                <h3 class="card__title">关键词差异</h3>
+                <span class="card__aside">各取 Top 20</span>
+              </div>
+              <div class="word-diff" id="compareWords"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ------------------ 系统设置 ------------------ -->
+      <section class="board" id="settingsView" hidden>
+        <header class="board__head">
+          <div>
+            <h2 class="board__title">系统设置</h2>
+            <p class="board__sub">模型与推理参数、操作记录</p>
+          </div>
+          <button class="btn btn--ghost" type="button" id="settingsRefreshBtn">刷新</button>
+        </header>
+
+        <section class="grid grid--top">
+          <article class="card">
+            <div class="card__head">
+              <h3 class="card__title">模型信息</h3>
+              <span class="card__aside" id="modelState">—</span>
+            </div>
+            <dl class="facts" id="modelFacts"></dl>
+          </article>
+
+          <article class="card">
+            <div class="card__head">
+              <h3 class="card__title">推理参数</h3>
+              <span class="card__aside">可调项对后续任务生效</span>
+            </div>
+            <form id="settingsForm" novalidate>
+              <label class="field">
+                <span class="field__label">低置信度复核阈值（0.50～0.99）</span>
+                <input class="field__input" type="number" id="reviewThreshold"
+                       min="0.5" max="0.99" step="0.01" required>
+              </label>
+              <label class="field">
+                <span class="field__label">单条评论关键词数量（1～10）</span>
+                <input class="field__input" type="number" id="keywordsPerComment"
+                       min="1" max="10" step="1" required>
+              </label>
+              <p class="profile__error" id="settingsError" hidden></p>
+              <button class="btn btn--primary btn--block" type="submit" id="settingsSubmit">
+                保存设置
+              </button>
+            </form>
+            <dl class="facts facts--muted" id="readonlyFacts"></dl>
+          </article>
+        </section>
+
+        <section class="card card--table">
+          <div class="card__head">
+            <h3 class="card__title">操作记录</h3>
+            <span class="card__aside">最近 50 条</span>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="auditTable">
+              <thead>
+                <tr>
+                  <th class="col-time">时间</th>
+                  <th class="col-user">账号</th>
+                  <th class="col-action">操作</th>
+                  <th>详情</th>
+                </tr>
+              </thead>
+              <tbody id="auditBody"></tbody>
+            </table>
+            <p class="table-empty" id="auditEmpty" hidden>暂无操作记录</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- ------------------ 个人中心弹窗 ------------------ -->
+    <div class="modal" id="profileModal" hidden>
+      <div class="modal__mask" data-close-profile></div>
+      <section class="modal__card profile" role="dialog" aria-modal="true"
+               aria-labelledby="profileTitle">
+        <header class="profile__head">
+          <h3 class="profile__title" id="profileTitle">个人中心</h3>
+          <button class="profile__close" type="button" data-close-profile
+                  aria-label="关闭个人中心">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </header>
+
+        <div class="profile__who">
+          <span class="profile__avatar" id="profileAvatar" aria-hidden="true">—</span>
+          <div class="profile__who-text">
+            <p class="profile__name" id="profileName">—</p>
+            <p class="profile__desc">系统管理员 · 数据保存在本地服务</p>
+          </div>
+        </div>
+
+        <dl class="profile__facts">
+          <div class="profile__fact">
+            <dt>登录账号</dt>
+            <dd id="profileUsername">—</dd>
+          </div>
+          <div class="profile__fact">
+            <dt>上次登录</dt>
+            <dd id="profileLastLogin">—</dd>
+          </div>
+          <div class="profile__fact">
+            <dt>账号创建</dt>
+            <dd id="profileCreated">—</dd>
+          </div>
+        </dl>
+
+        <form class="profile__form" id="passwordForm" novalidate>
+          <h4 class="profile__sub">修改密码</h4>
+
+          <label class="field">
+            <span class="field__label">原密码</span>
+            <input class="field__input" type="password" id="oldPassword" name="oldPassword"
+                   autocomplete="current-password" placeholder="请输入当前使用的密码"
+                   maxlength="64" required>
+          </label>
+
+          <label class="field">
+            <span class="field__label">新密码</span>
+            <input class="field__input" type="password" id="newPassword" name="newPassword"
+                   autocomplete="new-password" placeholder="6～64 位，建议混合大小写与数字"
+                   maxlength="64" required>
+          </label>
+
+          <label class="field">
+            <span class="field__label">确认新密码</span>
+            <input class="field__input" type="password" id="confirmPassword" name="confirmPassword"
+                   autocomplete="new-password" placeholder="再次输入新密码"
+                   maxlength="64" required>
+          </label>
+
+          <p class="profile__error" id="passwordError" hidden></p>
+
+          <button class="btn btn--primary btn--block" type="submit" id="passwordSubmit">
+            更新密码
+          </button>
+        </form>
+
+        <div class="profile__foot">
+          <button class="btn btn--ghost" type="button" id="profileLogoutBtn">退出登录</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ------------------ 解析报告弹窗 ------------------ -->
+    <div class="modal" id="reportModal" hidden>
+      <div class="modal__mask" data-close-report></div>
+      <section class="modal__card profile" role="dialog" aria-modal="true"
+               aria-labelledby="reportTitle">
+        <header class="profile__head">
+          <h3 class="profile__title" id="reportTitle">解析报告</h3>
+          <button class="profile__close" type="button" data-close-report
+                  aria-label="关闭解析报告">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </header>
+
+        <p class="profile__desc report__file" id="reportFile">—</p>
+
+        <!-- 导入校验结果：编码、乱码与不可见字符的检测修复情况 -->
+        <div class="validation" id="reportValidation" hidden>
+          <div class="validation__top">
+            <span class="validation__badge" id="reportStatus">—</span>
+            <span class="validation__summary" id="reportSummary">—</span>
+          </div>
+
+          <dl class="profile__facts validation__facts">
+            <div class="profile__fact">
+              <dt>文件格式</dt>
+              <dd id="reportFormat">—</dd>
+            </div>
+            <div class="profile__fact">
+              <dt>检测编码</dt>
+              <dd id="reportEncoding">—</dd>
+            </div>
+            <div class="profile__fact">
+              <dt>原始文件备份</dt>
+              <dd id="reportBackup">—</dd>
+            </div>
+          </dl>
+
+          <ul class="validation__issues" id="reportIssues"></ul>
+          <button class="btn btn--ghost btn--block" type="button" id="downloadBackupBtn" hidden>
+            下载原始文件备份
+          </button>
+        </div>
+
+        <h4 class="profile__sub">解析统计</h4>
+        <dl class="profile__facts">
+          <div class="profile__fact">
+            <dt>源文件数据行</dt>
+            <dd id="reportTotal">—</dd>
+          </div>
+          <div class="profile__fact">
+            <dt>有效评论</dt>
+            <dd id="reportValid">—</dd>
+          </div>
+          <div class="profile__fact">
+            <dt>被过滤</dt>
+            <dd id="reportFiltered">—</dd>
+          </div>
+          <div class="profile__fact">
+            <dt>识别到的评论列</dt>
+            <dd id="reportColumn">—</dd>
+          </div>
+        </dl>
+
+        <div class="report__reasons" id="reportReasons" hidden>
+          <h4 class="profile__sub">过滤原因分布</h4>
+          <ul class="report__list" id="reportReasonList"></ul>
+        </div>
+
+        <div class="profile__foot">
+          <button class="btn btn--primary" type="button" data-close-report>查看分析结果</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ------------------ 网页正文确认弹窗 ------------------ -->
+    <div class="modal" id="previewModal" hidden>
+      <div class="modal__mask" data-close-preview></div>
+      <section class="modal__card page-preview" role="dialog" aria-modal="true"
+               aria-labelledby="previewTitle">
+        <header class="profile__head">
+          <div>
+            <h3 class="profile__title" id="previewTitle">确认网页正文</h3>
+            <p class="review__meta" id="previewUrl">—</p>
+          </div>
+          <button class="profile__close" type="button" data-close-preview
+                  aria-label="关闭正文确认弹窗">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </header>
+
+        <p class="page-preview__hint">
+          系统已自动抽取正文。请确认下面这段内容确实是你要分析的评论主体，再开始分析。
+        </p>
+
+        <p class="page-preview__warning" id="previewWarning" hidden></p>
+
+        <dl class="page-preview__stats" id="previewStats"></dl>
+
+        <div class="page-preview__excerpt" id="previewExcerpt">—</div>
+
+        <footer class="review__foot">
+          <button class="btn btn--ghost" type="button" id="previewRetryBtn">重新抓取</button>
+          <span class="review__foot-spacer"></span>
+          <button class="btn btn--ghost" type="button" data-close-preview>取消</button>
+          <button class="btn btn--primary" type="button" id="previewConfirmBtn">确认并分析</button>
+        </footer>
+      </section>
+    </div>
+
+    <!-- ------------------ 任务重命名弹窗 ------------------ -->
+    <div class="modal" id="renameModal" hidden>
+      <div class="modal__mask" data-close-rename></div>
+      <section class="modal__card profile" role="dialog" aria-modal="true"
+               aria-labelledby="renameTitle">
+        <header class="profile__head">
+          <h3 class="profile__title" id="renameTitle">重命名任务</h3>
+          <button class="profile__close" type="button" data-close-rename
+                  aria-label="关闭重命名弹窗">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </header>
+        <label class="field">
+          <span class="field__label">任务名称（1～100 个字符）</span>
+          <input class="field__input" type="text" id="renameInput" maxlength="100"
+                 placeholder="输入新的任务名称" autocomplete="off">
+        </label>
+        <p class="profile__error" id="renameError" hidden></p>
+        <footer class="review__foot">
+          <span class="review__foot-spacer"></span>
+          <button class="btn btn--ghost" type="button" data-close-rename>取消</button>
+          <button class="btn btn--primary" type="button" id="renameSubmitBtn">保存</button>
+        </footer>
+      </section>
+    </div>
+
+    <!-- ------------------ 评论列人工指定弹窗 ------------------ -->
+    <div class="modal" id="columnModal" hidden>
+      <div class="modal__mask" data-close-column></div>
+      <section class="modal__card column-pick" role="dialog" aria-modal="true"
+               aria-labelledby="columnTitle">
+        <header class="profile__head">
+          <div>
+            <h3 class="profile__title" id="columnTitle">选择评论列</h3>
+            <p class="review__meta" id="columnMeta">—</p>
+          </div>
+          <button class="profile__close" type="button" data-close-column
+                  aria-label="关闭选择评论列弹窗">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </header>
+
+        <p class="column-pick__hint">
+          未能自动识别评论列。请对照表头与样例内容，选择真正存放评论正文的那一列。
+        </p>
+        <div class="column-pick__list" id="columnOptions"></div>
+        <p class="profile__error" id="columnError" hidden></p>
+
+        <footer class="review__foot">
+          <span class="review__foot-spacer"></span>
+          <button class="btn btn--ghost" type="button" data-close-column>取消</button>
+          <button class="btn btn--primary" type="button" id="columnSubmitBtn">确认并开始分析</button>
+        </footer>
+      </section>
+    </div>
+
+    <!-- ------------------ 人工复核弹窗 ------------------ -->
+    <div class="modal" id="reviewModal" hidden>
+      <div class="modal__mask" data-close-review></div>
+      <section class="modal__card review" role="dialog" aria-modal="true"
+               aria-labelledby="reviewTitle">
+        <header class="profile__head">
+          <div>
+            <h3 class="profile__title" id="reviewTitle">人工复核</h3>
+            <p class="review__meta" id="reviewMeta">—</p>
+          </div>
+          <button class="profile__close" type="button" data-close-review
+                  aria-label="关闭人工复核弹窗">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </header>
+
+        <div class="review__grid">
+          <!-- 左侧：评论原文与模型置信度 -->
+          <div class="review__main">
+            <span class="review__label">评论原文</span>
+            <div class="review__quote" id="reviewText">—</div>
+            <div class="review__keywords" id="reviewKeywords"></div>
+
+            <div class="review__gauge">
+              <div class="review__dial">
+                <svg class="gauge" viewBox="0 0 120 120" aria-hidden="true">
+                  <circle class="gauge__track" cx="60" cy="60" r="52"></circle>
+                  <circle class="gauge__value" id="reviewGaugeValue" cx="60" cy="60" r="52"></circle>
+                </svg>
+                <div class="gauge__center">
+                  <strong id="reviewConfidence">—</strong>
+                  <span>模型置信度</span>
+                </div>
+              </div>
+              <div class="review__gauge-info">
+                <span class="review__label">置信度评估</span>
+                <p id="reviewThresholdTip">—</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧：模型判定与人工结论 -->
+          <div class="review__side">
+            <div class="review__model">
+              <span class="review__label" id="reviewModelLabel">模型判定</span>
+              <span class="tag" id="reviewModelTag">—</span>
+            </div>
+
+            <span class="review__label">人工复核结论</span>
+            <div class="review__options" id="reviewOptions">
+              <button class="review-option" type="button" data-sentiment="POSITIVE">正面</button>
+              <button class="review-option" type="button" data-sentiment="NEGATIVE">负面</button>
+              <button class="review-option" type="button" data-sentiment="NEUTRAL">中性</button>
+            </div>
+            <p class="review__hint">
+              请按评论的实际语义选择结论。与模型判定不一致时会覆盖该条结果的最终标签，
+              并同步更新情感分布与导出数据。
+            </p>
+          </div>
+        </div>
+
+        <footer class="review__foot">
+          <button class="btn btn--ghost" type="button" id="reviewUndoBtn" hidden>撤销复核</button>
+          <span class="review__foot-spacer"></span>
+          <button class="btn btn--ghost" type="button" data-close-review>取消</button>
+          <button class="btn btn--primary" type="button" id="reviewSubmitBtn">确认复核</button>
+        </footer>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- 轻提示容器 -->
+<div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+<!-- 本地化的图表库，避免依赖外网 CDN；词云插件缺失时由 charts.js 降级为标签云 -->
+<script src="lib/echarts.min.js"></script>
+<script src="lib/echarts-wordcloud.min.js" onerror="window.__wordCloudFailed = true"></script>
+<script src="js/api.js"></script>
+<script src="js/charts.js?v=20261110e"></script>
+<script src="js/app.js?v=20261119b"></script>
+<script src="js/motion.js?v=20261119b"></script>
+</body>
+</html>
