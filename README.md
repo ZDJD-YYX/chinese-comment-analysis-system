@@ -85,7 +85,7 @@
 
 训练脚本默认导出到 `model/bert-zh-sentiment-v1/`，当前部署版本为 `model/bert-zh-sentiment-v3/`（含温度校准与类别偏置修正）。
 
-模型权重（约 200MB）未纳入仓库。获取方式：按下方「训练模型」自行训练，或联系作者获取。
+模型权重（约 196MB）未纳入仓库，可从 [Releases v1.0.0](https://github.com/ZDJD-YYX/chinese-comment-analysis-system/releases/tag/v1.0.0) 下载 [model.zip](https://github.com/ZDJD-YYX/chinese-comment-analysis-system/releases/download/v1.0.0/model.zip)，解压后放入项目根目录的 `model/` 下；也可按下方「训练模型」自行训练生成。
 
 ## 快速开始
 
@@ -218,7 +218,7 @@ python inference.py --model-dir model/bert-zh-sentiment-v3
 - `data/示例评论_200条.csv`：演示样本
 - `data/真实评论_网络下载/`：部分公开真实评论
 
-以下大文件因体积限制未上传，可从公开渠道下载：
+以下大文件因体积限制未纳入仓库，可下载 [data.zip](https://github.com/ZDJD-YYX/chinese-comment-analysis-system/releases/download/v1.0.0/data.zip)（约 44MB，解压后合并到项目根目录的 `data/` 下），或从公开渠道获取：
 
 | 数据集 | 约体积 |
 | --- | --- |
