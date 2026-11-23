@@ -40,3 +40,10 @@ data/real_public/online_shopping_10_cats/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# 根目录答辩材料（仅本地保留，不纳入仓库）
+/中文评论智能分析系统-答辩PPT*
+/中文评论智能分析系统-系统演示视频讲解稿.docx
+/中文评论智能分析系统-结课答辩问答手册.docx
+/系统演示流程-答辩用.docx
+/软件工程综合实训结课答辩问题库.pdf
